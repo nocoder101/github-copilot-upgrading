@@ -1,154 +1,119 @@
-<h1 align="center">Upgrading a Python project with GitHub Copilot</h1>
-<h5 align="center">Perform complex upgrades from legacy code to latest stable versions</h3>
+## GitHub Copilot로 레거시 프로젝트 업그레이드하기
 
-<p align="center">
-  <a href="#mega-prerequisites">Prerequisites</a> •
-  <a href="#books-resources">Resources</a> •
-  <a href="#learning-objectives">Learning Objectives</a>
-</p>
-
-- **Who is this for**: Any tecnologist that is looking to apply AI pair-programming techniques with GitHub Copilot to perform challenging upgrade scenarios for legacy code.
-- **What you'll learn**: You'll use advanced GitHub Copilot techniques that are specifically useful when upgrading projects.  These techniques and patterns can be applied to upgrading and revamping projects as well as developing from scratch.
-- **What you'll build**: A full revamped Python project that used Python 2.5 using legacy and deprecated constructs into the latest version of Python 3 available.
+레거시(구식) Python 애플리케이션을 최신 버전의 Python으로 업그레이드하는 과정을 GitHub Copilot의 도움을 받아 단계별로 안내합니다.
 
 > [!NOTE]
-> Looking for the workshop? Head over to [the workshop directory](./workshop)
+> 이 저장소는 **GitHub Copilot**의 다양한 기능(예: **Copilot Chat** 및 **인라인 채팅**)을 소개하기 위한 것입니다. 아래 단계별 가이드에는 필요한 작업에 대한 일반적인 설명이 포함되어 있으며, Copilot Chat 또는 인라인 채팅을 통해 필요한 명령을 생성할 수 있습니다.
+>
+> 각 단계(해당되는 경우)에는 Copilot 제안의 정확성을 확인할 수 있는 `Cheatsheet`도 포함되어 있습니다.
+>
+> 💡 다양한 프롬프트를 시도해 보면서 GitHub Copilot 제안의 정확도가 어떻게 달라지는지 확인하세요. 예를 들어, 인라인 채팅을 사용할 때 추가 프롬프트를 통해 응답을 더 세밀하게 조정할 수 있습니다.
 
-## Learning Objectives
+## 워크샵 기능
 
-In this workshop, you will:
+이 워크샵에서는 Python 2.5 버전을 사용했던 레거시 Python 애플리케이션을 다룹니다. 주요 기능은 다음과 같습니다:
 
-  - Use advanced GitHub Copilot interaction techniques to deal with a legacy project
-  - Iterate, validate, and refine answers to upgrade the legacy project and validate its correctness
-  - Apply generic concpets that can improve suggestions and select from different strategies that can yield better results.
-  - Build a thorough testing strategy to help you identify potential issues and
-    validate the project in its final state after upgrading.
+1. 모든 종속성이 미리 설치되어 있지만, 레거시 애플리케이션에서는 구버전 Python을 사용합니다.
+2. 애플리케이션은 Sqlite3와 구식 Python 문법을 사용하며, 이를 최신 문법으로 업데이트할 수 있습니다.
+3. 레거시 코드에는 기능 테스트에 사용할 수 있는 문서가 포함되어 있습니다.
+4. 단위 테스트와 기능 테스트가 레거시 코드에 포함되어 있습니다.
 
-## :mega: Prerequisites
+### 1. 에이전트를 사용해 프로젝트 탐색하기
 
-Before joining the workshop, there is only one prerequisite: you must have a public GitHub account. All resources, dependencies, and data are part of the repository itself. Make sure you have your GitHub Copilot license, trial, or the free version.
+`@workspace` 에이전트를 사용해 프로젝트의 동작 방식을 설명받으세요.
 
-## Main takeaways
+- GitHub Copilot Chat을 열고 프롬프트 앞에 `@workspace`를 붙여 질문하세요.
+- 예시: 프로젝트가 종속성을 어떻게 설치하는지 물어보세요.
 
-### 1. Define Clear Objectives and Requirements
+### 2. 레거시 및 포팅 문제 파악하기
 
-*What needs to be achieved?*
+Python 애플리케이션의 테스트를 실행해 보세요. 사전 설치된 `pytest`를 사용해 결과를 확인하세요.
 
-Start by understanding the end goal clearly. What is the result you're after? For upgrading legacy projects, you must ensure a thorough testing strategy that can help you validate correctness and completion when making critical changes.
+- `@workspace`에게 "이 코드를 최신 Python으로 포팅할 때 발생할 수 있는 문제는?"과 같이 질문하세요.
+- 가상 환경을 만들어 종속성을 설치해 보세요.
 
-*What are the constraints?*
+> [!NOTE]
+> 왜 문제가 발생할 수 있을까요? 레거시 Python에서 더 이상 지원되지 않는 `distribute`를 사용하기 때문입니다.
+> Copilot에게 종속성 설치의 다른 방법을 제안받으세요.
 
-Identify limitations or exclusions. For example, large language models (LLMs) can have (or lack) enough context to provide the right suggestions. It is up to you, the driver, to make decisions that achieve your goal. Certain business logic might prevent you from adding other external libraries or functionality. For example, if you are upgrading a project that is used in a production environment, you might not be able to add new libraries or functionality that could break the existing code.
+### 3. 모든 코드를 업그레이드 디렉터리로 복사하기
 
-> [!TIP]
-> Focus on being precise with the scope of the problem. If you're unsure, start broad and then progressively narrow down the details.
+코드를 포팅하려면 모든 코드를 `upgraded` 디렉터리로 복사해야 합니다. 여기서 작업을 진행합니다.
 
-### 2. Break Down the Problem into Components
+- 기능 테스트를 사용해 집중할 기능을 결정하세요.
 
-Decompose the problem into smaller, manageable pieces. For exampple, start with the core application components and then test a single API endpoint or library function. This makes it easier to understand and solve the problem step-by-step:
+> [!NOTE]
+> 비즈니스 로직에 따라 일부 구성 요소가 명확하지 않을 수 있습니다.
 
-- Single Public, exposed functions, or API endpoints
-- Tests, test setup and validation scripts 
-- Configuration and installation process
+### 4. 프로젝트 설치하기
 
-Ensure you're applying each condition step-by-step. In programming, breaking down a complex function into smaller helper functions can make it easier to write and debug.
+가상 환경을 만들고 프로젝트를 설치하세요. `python setup.py develop` 명령을 실행하고 오류를 분석하세요.
 
-> [!TIP]
-> Decomposition is a great way to deal with complexity, as it allows you to focus on one small task at a time.
+- 오류를 Copilot Chat에 붙여넣고 안내를 받으세요.
+- 파일을 컨텍스트로 추가하세요 (`#file:setup.py`).
+- 제안에 따라 오류를 수정하고 설치를 완료하세요.
 
-### 3. Create slices of work
+### 5. 테스트 실행하기
 
-A slice of work is a small, manageable piece of the overall problem. This is similar to breaking down the problem into components, but it focuses on the specific tasks that need to be completed. Think of this like a functional test that validates a specific feature or functionality. For example, if you're upgrading a legacy project, you might want to create a slice of work that focuses on upgrading a single library or function.
-This allows you to focus on one small task at a time, and it makes it easier to test and validate the changes.
+`pytest` 프레임워크와 명령줄 도구가 설치되어 있습니다. 단위 테스트를 실행하고 오류를 확인하세요.
 
-> [!TIP]
-> When creating slices of work, thing about the functional testing so that you have an easy way to test the changes. This can be as simple as creating a test script that validates the changes or creating a test suite that runs all the tests in the project.
+- 오류 출력을 Copilot에게 전달해 도움을 받으세요 (`#terminalSelection`).
+- Copilot의 답변을 검토하고 필요하면 추가 질문하세요.
+- 아직 코드를 수정하지 마세요.
 
-### 4. Iterate and Refine the Solution
-Start simple, then refine. In complex problems, initial attempts are rarely perfect. Start by generating a basic solution and progressively build on it.
+> [!NOTE]
+> 오류가 즉시 이해되지 않을 수 있습니다. Python 버전이 오래되었음을 염두에 두세요.
 
+### 6. try/except 오류 수정하기
 
-> [!TIP]
-> With every iteration, test and verify against expected outcomes to ensure the result is moving in the right direction.
+기능 테스트를 사용해 집중할 기능을 결정하세요. 이번 단계에서는 try/except 오류를 수정합니다.
 
-### 5. Use Examples to Clarify Requirements
-When creating prompts for AI models or explaining problems, provide examples. An example can illustrate your expectations, making the task clearer for anyone or anything (including tools like GitHub Copilot) involved in solving the problem.
+- Copilot에게 실제 문제를 설명하고, 오래된 Python 버전을 언급하세요.
+- 모든 try/except 오류를 수정하고 테스트가 통과하는지 확인하세요.
 
-For instance, with legacy code, you could explain what the inputs and expected outputs can be while including the logic to accomplish the task
+> [!NOTE]
+> 예외 외에도 다른 오류가 있을 수 있습니다. 모든 try/except를 먼저 수정하세요.
 
-> [!TIP]
-> Example-driven problem-solving helps align understanding. It's especially useful for ambiguous tasks.
+### 7. ConfigParser 문제 수정하기
 
-### 6. Identify Patterns and Reuse Solutions
-Recognize common patterns in your problem and reuse solutions where applicable. An obvious example of this in legacy Python projects is the use of exception handling in Python 2.5 would create a `SyntaxError` in Python 3+. 
+다음 단계는 `ConfigParser`가 사용 불가한 문제를 해결하는 것입니다. Copilot에게 전략을 제안받으세요.
 
-Sometimes in legacy projects it is common to create functions that handle either case, or even modules that can do imports depending on the Python version. This is a common pattern in legacy projects that can be reused in other projects.
+- "이 프로젝트가 Python 2.5에서 만들어졌는데 Python 3.9에서 다음과 같은 오류가 발생합니다:"라고 질문하고 테스트 출력을 포함하세요.
+- 간단한 해결책을 선택하고 즉시 검증하세요.
+- 테스트를 실행해 변경 사항이 올바른지 확인하세요.
 
-> [!TIP]
-> Recognizing patterns is a hallmark of experience. As you encounter similar problems repeatedly, you'll start to see similarities that can speed up your process.
+> [!NOTE]
+> 모든 테스트가 통과해야 합니다. 그렇지 않으면 Copilot에게 도움을 요청하세요.
 
-### 7. Use Constraints and Edge Cases for Robustness
-Think about edge cases and exceptions. Complex problems often involve handling not just the "ideal" data, but also the "edge" or "outlier" cases that might break a naive solution. Ensure that your prompt or solution accounts for these edge cases.
+### 8. 테스트를 Pytest로 포팅하기
 
-In legacy code, this might mean considering how the code behaves with unexpected inputs which would guide you to write new tests or modify existing ones.
+Pytest는 가장 강력한 테스트 프레임워크입니다. 레거시 코드는 `unittest`를 사용하므로 이를 `pytest`로 포팅하세요.
 
-> [!TIP]
-> Thinking through edge cases helps you build more resilient, generalized solutions. Always put an added emphasis in testing and creating a robust test suite to validate your changes.
+- 테스트 파일에서 `@workspace` 에이전트에게 포팅 방법을 물어보세요.
+- 단일 테스트를 작성하고, 가능하면 클래스 대신 함수형 테스트를 사용하세요.
+- 테스트를 작성한 후 Copilot에게 다음 테스트 생성을 요청하세요.
 
-### 8. Use Tools Effectively
-Whether you’re using GitHub Copilot, your editor auto-completion, or another form of automation, leverage the tools at your disposal but make sure you're guiding them with the right context. Tools are great for speeding up the generation, but they still need well-structured inputs and validation from you.
+> [!NOTE]
+> Pytest는 `unittest` 테스트도 실행할 수 있지만, 포팅하는 것이 더 좋습니다.
 
-For GitHub Copilot, ensure that your prompts are detailed, but concise. Tools often work best when given structured input that leaves little ambiguity.
+### 9. 최신 패키징 사용하기
 
-> [!TIP]
-> Be specific with your tools, but also check results, as tools might not always fully understand context unless properly guided.
+레거시 코드는 `distribute`와 `setuptools`를 사용합니다. 최신 표준인 `pyproject.toml`을 사용해 패키징하세요.
 
+- Copilot에게 `pyproject.toml` 파일 생성 방법을 물어보세요. `setup.py` 파일을 열어 컨텍스트로 활용하세요.
+- 새 `pyproject.toml` 파일을 만들고 Copilot의 제안으로 채우세요.
+- `pip install .` 명령으로 프로젝트를 설치하세요.
 
-### 9. Test and Validate
-Testing and validation are key to ensuring that your solution works as expected. In the case of legacy code, this is even more critical, as you want to ensure that the new code behaves similarly (or exactly the same) to the old code.
+> [!NOTE]
+> Python 패키징은 여전히 어려운 주제입니다. Copilot의 제안을 반드시 검증하세요.
 
-Testing ensures that both the expected and unexpected situations are handled correctly.
+### 10. GitHub Actions로 자동화하기
 
-> [!TIP]
-> Always have a validation step built into your process to catch mistakes early.
+레거시 프로젝트에는 자동화가 없습니다. GitHub Actions를 사용해 테스트와 설치를 자동화하세요.
 
-Generalization for Other Use Cases:
-For writing code or algorithms: The same concepts apply when generating functions, classes, or workflows. Clearly define input, expected output, edge cases, and iterate to refine.
+- `@workspace` 에이전트에게 GitHub Actions 워크플로우 생성 방법을 물어보세요.
+- 필요한 파일과 디렉터리를 만들어 워크플로우를 구성하세요.
+- 변경 사항을 푸시해 GitHub Actions가 작동하는지 확인하세요.
 
-For AI model prompts: When asking for something complex (like generating code, text, or designs), give clear objectives, break down the problem, provide context, and iterate.
-
-For design or content generation: Define the purpose, break down design elements, and provide examples or inspiration, then refine based on feedback.
-
-Final Thoughts:
-Complex generation problems often involve a balance of clarity, decomposition, iteration, and validation. Whether it's a SQL query or any other task, keeping these concepts in mind will allow you to generate more accurate, efficient, and reliable results.
-
-
-
-## :books: Resources
-
-Although not required, some of the features this workshop covers are in these Microsoft Learning modules:
-
-- [Code with GitHub Codespaces](https://learn.microsoft.com/training/modules/code-with-github-codespaces/)
-- [Using advanced GitHub Copilot features](https://learn.microsoft.com/training/modules/advanced-github-copilot/)
-
-## Contributing
-
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
-
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+> [!NOTE]
+> 자동화 구축은 시간이 걸릴 수 있습니다. 인내심을 갖고 Copilot의 도움을 받으세요.
